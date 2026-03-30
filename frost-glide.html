@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Frost Glide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --font-display: 'Bangers', cursive;
+  --font-body: 'Nunito', sans-serif;
+  --color-bg: #0a1628;
+  --color-surface: rgba(255,255,255,0.07);
+  --color-border: rgba(255,255,255,0.15);
+  --color-text: #e8f4ff;
+  --color-text-muted: #7090b0;
+  --color-primary: #4af0c0;
+  --color-danger: #ff4466;
+  --color-warning: #ffaa22;
+  --color-gold: #ffd700;
+  --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-6:24px;--space-8:32px;
+  --radius-sm:6px;--radius-md:10px;--radius-lg:16px;--radius-full:9999px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#0a1628;font-family:var(--font-body)}
+canvas{display:block}
+/* HUD */
+#hud{position:fixed;top:0;left:0;right:0;z-index:100;pointer-events:none;
+  display:flex;align-items:flex-start;justify-content:space-between;padding:12px 16px;gap:12px}
+.hud-panel{background:rgba(0,10,30,0.75);backdrop-filter:blur(8px);border:1px solid var(--color-border);
+  border-radius:var(--radius-md);padding:8px 14px;pointer-events:none}
+.hud-label{font-size:11px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:1px;font-weight:700}
+.hud-value{font-size:16px;font-weight:800;color:var(--color-text);font-variant-numeric:tabular-nums lining-nums}
+/* Health bar */
+#health-container{min-width:160px}
+#health-bar-bg{width:100%;height:12px;background:rgba(255,255,255,0.1);border-radius:var(--radius-full);margin-top:4px;overflow:hidden}
+#health-bar{height:100%;background:linear-gradient(90deg,#4af0c0,#22e0a0);border-radius:var(--radius-full);transition:width 0.3s,background 0.3s}
+/* Coin display */
+#coin-display{display:flex;align-items:center;gap:8px}
+.coin-icon{width:28px;height:28px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ffe066,#ffd700,#c8a000);
+  border:2px solid #ffe066;display:flex;align-items:center;justify-content:center;
+  font-size:9px;font-weight:900;color:#7a5500;flex-shrink:0;box-shadow:0 0 6px #ffd70088}
+/* Event banner */
+#event-banner{position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:200;
+  background:rgba(0,0,0,0.85);backdrop-filter:blur(10px);border-radius:var(--radius-lg);
+  padding:10px 24px;text-align:center;border:2px solid var(--color-warning);
+  font-family:var(--font-display);font-size:22px;letter-spacing:2px;
+  display:none;pointer-events:none;animation:bannerPop 0.4s ease}
+@keyframes bannerPop{from{transform:translateX(-50%) scale(0.8);opacity:0}to{transform:translateX(-50%) scale(1);opacity:1}}
+/* Screens */
+.screen{position:fixed;inset:0;z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(5,15,35,0.97);backdrop-filter:blur(4px)}
+.screen.hidden{display:none!important}
+.game-title{font-family:var(--font-display);font-size:clamp(3rem,8vw,6rem);color:var(--color-primary);
+  text-shadow:0 0 30px #4af0c055,0 4px 0 #1a7060;letter-spacing:4px;line-height:1;margin-bottom:8px}
+.game-subtitle{font-size:14px;color:var(--color-text-muted);margin-bottom:32px;letter-spacing:2px}
+.btn{padding:12px 32px;border-radius:var(--radius-full);font-family:var(--font-body);font-weight:800;font-size:16px;
+  cursor:pointer;border:2px solid transparent;transition:all 0.2s;letter-spacing:0.5px}
+.btn-primary{background:var(--color-primary);color:#0a1628;border-color:var(--color-primary)}
+.btn-primary:hover{background:#22d0a0;transform:translateY(-2px);box-shadow:0 6px 20px #4af0c044}
+.btn-secondary{background:transparent;color:var(--color-text);border-color:var(--color-border)}
+.btn-secondary:hover{border-color:var(--color-primary);color:var(--color-primary)}
+.btn-danger{background:#ff3355;color:#fff;border-color:#ff3355}
+.btn-danger:hover{background:#dd2244;transform:translateY(-2px)}
+/* Tabs */
+.tab-bar{display:flex;gap:4px;background:rgba(255,255,255,0.05);border-radius:var(--radius-md);padding:4px;margin-bottom:20px}
+.tab-btn{padding:8px 20px;border-radius:var(--radius-sm);font-weight:700;font-size:13px;cursor:pointer;
+  background:transparent;color:var(--color-text-muted);border:none;transition:all 0.2s}
+.tab-btn.active{background:var(--color-primary);color:#0a1628}
+/* Shop */
+#shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;width:100%;max-width:700px;max-height:50vh;overflow-y:auto;padding-right:4px}
+.sleigh-card{background:rgba(255,255,255,0.05);border:2px solid var(--color-border);border-radius:var(--radius-lg);
+  padding:14px 10px;text-align:center;cursor:pointer;transition:all 0.2s;position:relative}
+.sleigh-card:hover{border-color:var(--color-primary);transform:translateY(-3px)}
+.sleigh-card.equipped{border-color:var(--color-primary);background:rgba(74,240,192,0.1)}
+.sleigh-card.equipped::after{content:'✓ ON';position:absolute;top:6px;right:8px;font-size:9px;font-weight:900;color:var(--color-primary)}
+.sleigh-card.locked{opacity:0.7}
+.sleigh-preview{width:80px;height:50px;margin:0 auto 8px;border-radius:var(--radius-sm);position:relative;overflow:hidden}
+.sleigh-name{font-size:12px;font-weight:800;color:var(--color-text);margin-bottom:4px}
+.sleigh-cost{font-size:11px;color:var(--color-gold);font-weight:700}
+/* Customize panel */
+#customize-panel{width:100%;max-width:600px}
+.color-grid{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}
+.color-swatch{width:36px;height:36px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:all 0.2s}
+.color-swatch.selected{border-color:#fff;transform:scale(1.2)}
+.custom-preview{width:120px;height:80px;margin:12px auto;border-radius:var(--radius-md);position:relative;overflow:hidden}
+/* Environments */
+.env-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:500px;width:100%}
+.env-card{background:rgba(255,255,255,0.05);border:2px solid var(--color-border);border-radius:var(--radius-lg);
+  padding:12px;text-align:center;cursor:pointer;transition:all 0.2s}
+.env-card:hover{border-color:var(--color-primary);transform:translateY(-2px)}
+.env-card.active{border-color:var(--color-primary);background:rgba(74,240,192,0.1)}
+.env-preview{height:50px;border-radius:var(--radius-sm);margin-bottom:8px}
+/* Pause menu */
+#pause-menu{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+#pause-menu.hidden{display:none}
+/* Death screen */
+#death-screen .stat-row{display:flex;justify-content:space-between;min-width:260px;margin:8px 0;
+  font-size:15px;color:var(--color-text)}
+#death-screen .stat-row span:last-child{font-weight:800;color:var(--color-primary)}
+/* Debug overlay */
+#debug{position:fixed;bottom:0;left:0;z-index:999;background:rgba(0,0,0,0.75);color:#0f0;
+  font:11px/1.5 monospace;padding:4px 8px;pointer-events:none}
+/* Notification */
+#notification{position:fixed;top:120px;left:50%;transform:translateX(-50%);z-index:300;
+  background:rgba(0,10,30,0.9);border:1px solid var(--color-border);border-radius:var(--radius-full);
+  padding:8px 20px;font-size:13px;font-weight:700;color:var(--color-text);
+  display:none;pointer-events:none;white-space:nowrap}
+/* Distance display */
+#dist-display{font-family:var(--font-display);font-size:20px;letter-spacing:2px;color:var(--color-text)}
+/* Scrollbar */
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.2);border-radius:2px}
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="hud-panel" id="health-container">
+    <div class="hud-label">Health</div>
+    <div id="health-bar-bg"><div id="health-bar" style="width:100%"></div></div>
+  </div>
+  <div class="hud-panel" style="text-align:center">
+    <div class="hud-label">Distance</div>
+    <div id="dist-display">0m</div>
+  </div>
+  <div class="hud-panel" id="coin-display">
+    <div class="coin-icon">67</div>
+    <div>
+      <div class="hud-label">Coins</div>
+      <div class="hud-value" id="coin-count">0</div>
+    </div>
+  </div>
+</div>
+
+<div id="event-banner"></div>
+<div id="notification"></div>
+
+<!-- Main Menu -->
+<div class="screen" id="main-menu">
+  <div class="game-title">FROST GLIDE</div>
+  <div class="game-subtitle">MASTER THE SLOPES</div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:16px">
+    <button class="btn btn-primary" onclick="startGame()">▶ PLAY</button>
+    <button class="btn btn-secondary" onclick="showScreen('shop-screen')">🛷 SLEIGHS</button>
+    <button class="btn btn-secondary" onclick="showScreen('env-screen')">🏔 WORLDS</button>
+  </div>
+  <div style="font-size:13px;color:var(--color-text-muted);text-align:center;max-width:340px;line-height:1.8">
+    🎮 <b>Arrow keys / WASD</b> — steer &nbsp;|&nbsp; <b>P</b> — pause<br>
+    Dodge trees 🌲 | Collect coins | Survive events!
+  </div>
+  <div style="margin-top:20px;font-size:11px;color:#4a6080">
+    💡 Events unlock every 20min of play: Fire → Phantom → Easter → Christmas
+  </div>
+</div>
+
+<!-- Shop Screen -->
+<div class="screen hidden" id="shop-screen">
+  <div style="display:flex;align-items:center;gap:16px;margin-bottom:8px">
+    <div class="game-title" style="font-size:2.5rem">SLEIGH SHOP</div>
+    <div class="hud-panel" style="display:flex;align-items:center;gap:8px">
+      <div class="coin-icon">67</div>
+      <span style="font-weight:800;font-size:18px" id="shop-coins">0</span>
+    </div>
+  </div>
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchShopTab('sleighs',this)">Sleighs</button>
+    <button class="tab-btn" onclick="switchShopTab('custom',this)">Customise</button>
+  </div>
+  <div id="shop-tab-sleighs">
+    <div id="shop-grid"></div>
+  </div>
+  <div id="shop-tab-custom" style="display:none">
+    <div id="customize-panel">
+      <p style="color:var(--color-text-muted);font-size:13px;margin-bottom:8px">Choose your sleigh colour (costs 20 coins per change)</p>
+      <div class="color-grid" id="color-grid"></div>
+      <div class="custom-preview" id="custom-preview"></div>
+      <p style="font-size:12px;color:var(--color-text-muted);text-align:center" id="custom-status">Custom skin unlocked for free!</p>
+    </div>
+  </div>
+  <button class="btn btn-secondary" style="margin-top:16px" onclick="showScreen('main-menu')">← Back</button>
+</div>
+
+<!-- Environment Screen -->
+<div class="screen hidden" id="env-screen">
+  <div class="game-title" style="font-size:2.5rem">WORLDS</div>
+  <p style="color:var(--color-text-muted);font-size:13px;margin-bottom:16px">Purchase environments with coins</p>
+  <div class="env-grid" id="env-grid"></div>
+  <button class="btn btn-secondary" style="margin-top:20px" onclick="showScreen('main-menu')">← Back</button>
+</div>
+
+<!-- Pause Menu -->
+<div id="pause-menu" class="hidden">
+  <div style="font-family:var(--font-display);font-size:3rem;color:var(--color-primary)">PAUSED</div>
+  <button class="btn btn-primary" onclick="resumeGame()">▶ Resume</button>
+  <button class="btn btn-secondary" onclick="showScreen('shop-screen');resumeGame();gameState='menu'">🛷 Sleighs</button>
+  <button class="btn btn-danger" onclick="quitGame()">✖ Quit</button>
+</div>
+
+<!-- Death Screen -->
+<div class="screen hidden" id="death-screen">
+  <div class="game-title" style="font-size:3rem;color:#ff4466">💥 WIPED OUT</div>
+  <div style="background:rgba(255,255,255,0.05);border-radius:var(--radius-lg);padding:20px;margin:16px 0">
+    <div class="stat-row"><span>Distance</span><span id="ds-dist">0m</span></div>
+    <div class="stat-row"><span>Coins collected</span><span id="ds-coins">0</span></div>
+    <div class="stat-row"><span>Best distance</span><span id="ds-best">0m</span></div>
+  </div>
+  <div style="display:flex;gap:12px">
+    <button class="btn btn-primary" onclick="startGame()">🔄 Try Again</button>
+    <button class="btn btn-secondary" onclick="quitGame()">🏠 Menu</button>
+  </div>
+</div>
+
+<!-- Debug -->
+<div id="debug">FPS: --</div>
+
+<script>
+// ===================== CONSTANTS =====================
+const SLEIGHS = [
+  { id:'classic',   name:'Classic',      cost:0,   desc:'The OG sleigh',       colors:['#c8ddf0','#a0c8f0'],  unlocked:true, equipped:true },
+  { id:'blossom',   name:'Blooming',     cost:55,  desc:'Flowers blooming!',    colors:['#ffb7de','#ff85c2'] },
+  { id:'aqua',      name:'Aqua Drift',   cost:100, desc:'Made of blue water',   colors:['#4af0ff','#0099dd'] },
+  { id:'roots',     name:'Roots Run Deep', cost:120, desc:'Green vines & nature', colors:['#4caf50','#2e7d32'] },
+  { id:'meta',      name:'Meta Glow',    cost:150, desc:'Tech-cool neon blue',  colors:['#0099ff','#0033cc'],  glow:true },
+  { id:'emerald',   name:'Emerald Crystal', cost:175, desc:'Crystal green gem', colors:['#00e676','#00b050'],  glow:true },
+  { id:'aesthetic', name:'Aesthetic',    cost:200, desc:'Light purple dream',   colors:['#ce93d8','#9c27b0'] },
+  { id:'lava',      name:'Lava Stone',   cost:300, desc:'Lava and stone power', colors:['#ff5722','#bf360c'],  glow:true },
+];
+
+const CUSTOM_COLORS = [
+  '#ff4466','#ff8800','#ffd700','#44ff66','#00ccff','#8844ff',
+  '#ff44cc','#44ffcc','#ff6644','#aaffaa','#ffaaff','#aaaaff',
+  '#ff2222','#2244ff','#22ff88','#ffffff'
+];
+
+const ENVIRONMENTS = [
+  { id:'snow',    name:'Winter Snow',  cost:0,    bgColors:['#1a2a4a','#0d1b33'],  groundColor:'#e8f4ff', unlocked:true },
+  { id:'forest',  name:'Deep Forest',  cost:60,   bgColors:['#0a2010','#061508'],  groundColor:'#2d5a1b' },
+  { id:'night',   name:'Night Sky',    cost:80,   bgColors:['#020818','#010510'],  groundColor:'#c8d8f0' },
+  { id:'desert',  name:'Sandy Dunes',  cost:90,   bgColors:['#3a2800','#251800'],  groundColor:'#d4aa55' },
+  { id:'candy',   name:'Candy Land',   cost:100,  bgColors:['#2a0040','#180028'],  groundColor:'#ffb7de' },
+];
+
+const EVENTS = [
+  { name:'🔥 FIRE STORM',   id:'fire',      startMin:20, color:'#ff6600', bgTop:'#3a0800', bgBot:'#1a0400', groundColor:'#8b2000', coinColor:'#ff9933' },
+  { name:'👻 PHANTOM ZONE', id:'phantom',   startMin:30, color:'#9933ff', bgTop:'#150028', bgBot:'#0a0018', groundColor:'#2d0050', coinColor:'#cc66ff' },
+  { name:'🥚 EASTER RUSH',  id:'easter',    startMin:40, color:'#ffcc00', bgTop:'#0a2800', bgBot:'#051800', groundColor:'#4caf50', coinColor:'#ffcc00', useEggs:true },
+  { name:'🎄 CHRISTMAS!',   id:'christmas', startMin:50, color:'#ff3333', bgTop:'#0a1f0a', bgBot:'#051005', groundColor:'#e8ffe8', coinColor:'#ffdd00', useGifts:true },
+];
+
+// ===================== STATE =====================
+const state = {
+  gameState: 'menu', // menu, playing, dead, paused
+  coins: parseInt(localStorage && localStorage.getItem('fg_coins') || '0') || 0,
+  bestDist: parseInt(localStorage && localStorage.getItem('fg_best') || '0') || 0,
+  equippedSleigh: localStorage && localStorage.getItem('fg_equipped') || 'classic',
+  unlockedSleighs: JSON.parse((localStorage && localStorage.getItem('fg_unlocked')) || '["classic"]'),
+  unlockedEnvs: JSON.parse((localStorage && localStorage.getItem('fg_envs')) || '["snow"]'),
+  selectedEnv: localStorage && localStorage.getItem('fg_env') || 'snow',
+  customColor: localStorage && localStorage.getItem('fg_color') || '#4af0c0',
+  // runtime
+  player: { x:0, y:0, vx:0, vy:0, lane:0, health:100, invincible:0 },
+  distance: 0,
+  speed: 200,
+  sessionCoins: 0,
+  startTime: 0,
+  currentEvent: null,
+  eventActive: false,
+  objects: [], // trees, coins, obstacles
+  particles: [],
+  cameraY: 0,
+  lastSpawnZ: 0,
+  snowParticles: [],
+};
+
+function saveState() {
+  try {
+    localStorage.setItem('fg_coins', state.coins);
+    localStorage.setItem('fg_best', state.bestDist);
+    localStorage.setItem('fg_equipped', state.equippedSleigh);
+    localStorage.setItem('fg_unlocked', JSON.stringify(state.unlockedSleighs));
+    localStorage.setItem('fg_envs', JSON.stringify(state.unlockedEnvs));
+    localStorage.setItem('fg_env', state.selectedEnv);
+    localStorage.setItem('fg_color', state.customColor);
+  } catch(e){}
+}
+
+// ===================== CANVAS SETUP =====================
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ===================== INPUT =====================
+const keys = {};
+document.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (e.code === 'KeyP' || e.code === 'Escape') {
+    if (state.gameState === 'playing') pauseGame();
+    else if (state.gameState === 'paused') resumeGame();
+  }
+});
+document.addEventListener('keyup', e => { keys[e.code] = false; });
+
+// Touch
+let touchStartX = null;
+canvas.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
+canvas.addEventListener('touchend', e => {
+  if (touchStartX === null) return;
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  if (Math.abs(dx) > 30) {
+    if (dx < 0) keys['ArrowLeft'] = true;
+    else keys['ArrowRight'] = true;
+    setTimeout(() => { keys['ArrowLeft'] = false; keys['ArrowRight'] = false; }, 150);
+  }
+  touchStartX = null;
+});
+
+// ===================== GAME LOGIC =====================
+// Pseudo-3D runner — isometric perspective scrolling down
+const LANE_COUNT = 7;
+const LANE_WIDTH = 90;
+const PERSPECTIVE = 600;
+const HORIZON_Y = 0.35; // fraction of screen height
+
+function getLaneX(lane) { // lane: -3 to 3
+  return canvas.width / 2 + lane * LANE_WIDTH * (1 - 0.3);
+}
+
+function project(worldX, worldZ) {
+  // worldZ: 0 = bottom of screen, increases going up
+  const screenY = canvas.height * (1 - HORIZON_Y) * (1 - worldZ / PERSPECTIVE) + canvas.height * HORIZON_Y;
+  const scale = 1 - worldZ / PERSPECTIVE;
+  const screenX = canvas.width / 2 + worldX * scale;
+  return { x: screenX, y: screenY, scale: Math.max(0.05, scale) };
+}
+
+function startGame() {
+  state.gameState = 'playing';
+  state.player = { x: 0, y: 0, vx: 0, vy: 0, lane: 0, laneF: 0, health: 100, invincible: 0 };
+  state.distance = 0;
+  state.speed = 180;
+  state.sessionCoins = 0;
+  state.startTime = performance.now();
+  state.currentEvent = null;
+  state.eventActive = false;
+  state.objects = [];
+  state.particles = [];
+  state.snowParticles = [];
+  spawnInitialObjects();
+  hideAllScreens();
+  document.getElementById('hud').style.display = 'flex';
+  updateHUD();
+}
+
+function spawnInitialObjects() {
+  // Spawn a bunch of objects ahead
+  for (let z = 80; z < 500; z += 25) {
+    spawnRowAt(z);
+  }
+  // Spawn coins
+  for (let z = 100; z < 500; z += 50) {
+    spawnCoinRow(z);
+  }
+}
+
+function spawnRowAt(z) {
+  // Randomly place 1-2 trees in the row, avoid centre lane
+  const numTrees = Math.random() < 0.6 ? 1 : 2;
+  const usedLanes = new Set();
+  for (let i = 0; i < numTrees; i++) {
+    let lane;
+    let attempts = 0;
+    do {
+      lane = Math.floor(Math.random() * 7) - 3;
+      attempts++;
+    } while ((usedLanes.has(lane) || (Math.abs(lane) < 1 && Math.random() < 0.7)) && attempts < 10);
+    usedLanes.add(lane);
+    state.objects.push({ type: 'tree', lane, z, hit: false });
+  }
+}
+
+function spawnCoinRow(z) {
+  // Spawn 1-3 coins in a row
+  const ev = state.currentEvent;
+  const type = ev && ev.useEggs ? 'egg' : ev && ev.useGifts ? 'gift' : 'coin';
+  const count = Math.ceil(Math.random() * 3);
+  const lanes = [-2,-1,0,1,2].sort(() => Math.random()-0.5).slice(0,count);
+  lanes.forEach(lane => {
+    state.objects.push({ type, lane, z, collected: false });
+  });
+}
+
+function getElapsedMinutes() {
+  return (performance.now() - state.startTime) / 60000;
+}
+
+function checkEvents() {
+  if (state.gameState !== 'playing') return;
+  const elapsed = getElapsedMinutes();
+  // Find highest applicable event
+  let newEvent = null;
+  for (const ev of EVENTS) {
+    if (elapsed >= ev.startMin) newEvent = ev;
+  }
+  if (newEvent !== state.currentEvent) {
+    state.currentEvent = newEvent;
+    if (newEvent) showEventBanner(newEvent.name, newEvent.color);
+  }
+}
+
+function showEventBanner(text, color) {
+  const el = document.getElementById('event-banner');
+  el.textContent = text;
+  el.style.color = color;
+  el.style.borderColor = color;
+  el.style.display = 'block';
+  clearTimeout(el._timeout);
+  el._timeout = setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+function showNotification(text) {
+  const el = document.getElementById('notification');
+  el.textContent = text;
+  el.style.display = 'block';
+  clearTimeout(el._timeout);
+  el._timeout = setTimeout(() => { el.style.display = 'none'; }, 2000);
+}
+
+let lastTime = 0;
+let _fps = 0, _fframes = 0, _flast = performance.now();
+
+function gameLoop(ts) {
+  requestAnimationFrame(gameLoop);
+  const dt = Math.min((ts - lastTime) / 1000, 0.05);
+  lastTime = ts;
+
+  // FPS
+  _fframes++;
+  if (ts - _flast >= 1000) {
+    _fps = Math.round(_fframes * 1000 / (ts - _flast));
+    _fframes = 0; _flast = ts;
+    document.getElementById('debug').textContent = `FPS:${_fps} | Dist:${Math.round(state.distance)}m | Objs:${state.objects.length}`;
+  }
+
+  if (state.gameState === 'playing') {
+    update(dt);
+  }
+  render();
+}
+
+function update(dt) {
+  checkEvents();
+
+  // Player input — smooth lane transitions
+  const targetLane = state.player.lane;
+  let movingLeft = keys['ArrowLeft'] || keys['KeyA'];
+  let movingRight = keys['ArrowRight'] || keys['KeyD'];
+
+  if (movingLeft) state.player.laneF -= dt * 6;
+  if (movingRight) state.player.laneF += dt * 6;
+  state.player.laneF = Math.max(-3, Math.min(3, state.player.laneF));
+
+  // Snap to nearest integer lane for collision
+  state.player.lane = Math.round(state.player.laneF);
+
+  // Increase speed and distance
+  state.distance += state.speed * dt;
+  state.speed = Math.min(600, 180 + state.distance * 0.02);
+
+  // Scroll objects toward player
+  const scrollSpeed = state.speed;
+  for (const obj of state.objects) {
+    obj.z -= scrollSpeed * dt;
+  }
+
+  // Spawn new rows
+  const maxZ = state.objects.length ? Math.max(...state.objects.map(o=>o.z)) : 0;
+  while (maxZ < 500) {
+    const newZ = maxZ + 25 + Math.random() * 30;
+    if (Math.random() < 0.7) spawnRowAt(newZ);
+    if (Math.random() < 0.5) spawnCoinRow(newZ);
+    break;
+  }
+  // Continuous spawning
+  if (Math.random() < dt * 3) {
+    const farZ = 480 + Math.random() * 60;
+    spawnRowAt(farZ);
+  }
+  if (Math.random() < dt * 2) {
+    const farZ = 460 + Math.random() * 80;
+    spawnCoinRow(farZ);
+  }
+
+  // Collisions
+  const playerLane = state.player.lane;
+  for (const obj of state.objects) {
+    if (obj.z < -20 || obj.z > 50) continue; // only check near objects
+    if (obj.z < 5 && obj.z > -5) { // in collision zone
+      if (obj.lane === playerLane) {
+        if ((obj.type === 'coin' || obj.type === 'egg' || obj.type === 'gift') && !obj.collected) {
+          obj.collected = true;
+          state.sessionCoins++;
+          state.coins++;
+          spawnCoinParticles(obj);
+          updateHUD();
+          saveState();
+        } else if (obj.type === 'tree' && !obj.hit && state.player.invincible <= 0) {
+          obj.hit = true;
+          killPlayer();
+        } else if (obj.type === 'snowdrift' && !obj.hit && state.player.invincible <= 0) {
+          obj.hit = true;
+          damagePlayer(15);
+          spawnHitParticles();
+        }
+      }
+    }
+  }
+
+  // Remove far-behind objects
+  state.objects = state.objects.filter(o => o.z > -60 && !(o.collected) && !(o.hit && o.type !== 'tree'));
+
+  // Invincibility frames
+  if (state.player.invincible > 0) state.player.invincible -= dt;
+
+  // Snow particles
+  updateSnow(dt);
+
+  // Update particles
+  for (const p of state.particles) {
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vy += 200 * dt;
+    p.life -= dt;
+    p.alpha = p.life / p.maxLife;
+  }
+  state.particles = state.particles.filter(p => p.life > 0);
+
+  updateHUD();
+}
+
+function damagePlayer(amount) {
+  state.player.health = Math.max(0, state.player.health - amount);
+  state.player.invincible = 0.5;
+  updateHealthBar();
+  if (state.player.health <= 0) killPlayer();
+}
+
+function killPlayer() {
+  state.gameState = 'dead';
+  spawnDeathParticles();
+  setTimeout(() => showDeathScreen(), 800);
+}
+
+function spawnCoinParticles(obj) {
+  for (let i = 0; i < 8; i++) {
+    const p = project(obj.lane * LANE_WIDTH * 0.7, 0);
+    state.particles.push({
+      x: p.x, y: p.y,
+      vx: (Math.random()-0.5)*120,
+      vy: -Math.random()*180 - 60,
+      life: 0.7, maxLife: 0.7,
+      color: '#ffd700', size: 4, alpha: 1
+    });
+  }
+}
+
+function spawnHitParticles() {
+  const p = project(state.player.laneF * LANE_WIDTH * 0.7, 0);
+  for (let i = 0; i < 12; i++) {
+    state.particles.push({
+      x: p.x, y: p.y,
+      vx: (Math.random()-0.5)*200,
+      vy: -Math.random()*150,
+      life: 0.5, maxLife: 0.5,
+      color: '#ffffff', size: 3, alpha: 1
+    });
+  }
+}
+
+function spawnDeathParticles() {
+  const p = project(state.player.laneF * LANE_WIDTH * 0.7, 0);
+  for (let i = 0; i < 30; i++) {
+    state.particles.push({
+      x: p.x, y: p.y,
+      vx: (Math.random()-0.5)*300,
+      vy: -Math.random()*250 - 50,
+      life: 1.2, maxLife: 1.2,
+      color: ['#ff4466','#ff8800','#ffdd00','#ffffff'][Math.floor(Math.random()*4)],
+      size: Math.random()*6+2, alpha: 1
+    });
+  }
+}
+
+function updateSnow(dt) {
+  // Spawn snow
+  while (state.snowParticles.length < 80) {
+    state.snowParticles.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      vy: 40 + Math.random() * 80,
+      vx: (Math.random()-0.5)*20,
+      size: Math.random()*3+1,
+      alpha: Math.random()*0.6+0.2,
+      wobble: Math.random()*Math.PI*2
+    });
+  }
+  for (const s of state.snowParticles) {
+    s.y += s.vy * dt;
+    s.x += s.vx * dt + Math.sin(s.wobble) * 0.5;
+    s.wobble += dt * 2;
+    if (s.y > canvas.height) {
+      s.y = -10;
+      s.x = Math.random() * canvas.width;
+    }
+  }
+}
+
+// ===================== RENDER =====================
+function getEnvData() {
+  const ev = state.currentEvent;
+  const envDef = ENVIRONMENTS.find(e => e.id === state.selectedEnv) || ENVIRONMENTS[0];
+  return {
+    bgTop: ev ? ev.bgTop : envDef.bgColors[0],
+    bgBot: ev ? ev.bgBot : envDef.bgColors[1],
+    groundColor: ev ? ev.groundColor : envDef.groundColor,
+    coinColor: ev ? ev.coinColor : '#ffd700',
+    useEggs: ev ? ev.useEggs : false,
+    useGifts: ev ? ev.useGifts : false,
+  };
+}
+
+function getSleighColors() {
+  if (state.equippedSleigh === 'custom') {
+    return [state.customColor, shadeColor(state.customColor, -30)];
+  }
+  const def = SLEIGHS.find(s => s.id === state.equippedSleigh) || SLEIGHS[0];
+  return def.colors;
+}
+
+function shadeColor(hex, amount) {
+  const num = parseInt(hex.replace('#',''),16);
+  const r = Math.max(0,Math.min(255,(num>>16)+amount));
+  const g = Math.max(0,Math.min(255,((num>>8)&0xff)+amount));
+  const b = Math.max(0,Math.min(255,(num&0xff)+amount));
+  return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
+}
+
+function render() {
+  const W = canvas.width, H = canvas.height;
+  const env = getEnvData();
+  const horizonY = H * HORIZON_Y;
+
+  // Sky gradient
+  const sky = ctx.createLinearGradient(0, 0, 0, horizonY);
+  sky.addColorStop(0, env.bgTop);
+  sky.addColorStop(1, env.bgBot);
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, horizonY);
+
+  // Ground gradient
+  const ground = ctx.createLinearGradient(0, horizonY, 0, H);
+  ground.addColorStop(0, shadeColor(env.groundColor, -40));
+  ground.addColorStop(1, env.groundColor);
+  ctx.fillStyle = ground;
+  ctx.fillRect(0, horizonY, W, H - horizonY);
+
+  // Draw tracks / lane guides
+  drawTracks(horizonY, env);
+
+  // Sort objects by z (far to near)
+  const sorted = [...state.objects].sort((a,b) => b.z - a.z);
+
+  for (const obj of sorted) {
+    if (obj.z < -30 || obj.z > PERSPECTIVE) continue;
+    const worldX = obj.lane * LANE_WIDTH * (0.7 + 0.3*(1-obj.z/PERSPECTIVE));
+    const proj = project(worldX, obj.z);
+    if (obj.type === 'tree') drawTree(proj, obj, env);
+    else if (obj.type === 'coin') drawCoin(proj, env.coinColor, false, false);
+    else if (obj.type === 'egg') drawCoin(proj, '#ffcc00', true, false);
+    else if (obj.type === 'gift') drawCoin(proj, '#ff3333', false, true);
+  }
+
+  // Draw player sleigh (at z=0 area, near bottom)
+  if (state.gameState === 'playing' || state.gameState === 'paused') {
+    drawPlayer();
+  }
+
+  // Particles
+  for (const p of state.particles) {
+    ctx.globalAlpha = Math.max(0, p.alpha);
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Snow (on top of everything if active)
+  if (!state.currentEvent || state.currentEvent.id === 'christmas') {
+    drawSnow();
+  }
+
+  // Event atmospheric effects
+  if (state.currentEvent) drawEventFX(state.currentEvent);
+}
+
+function drawTracks(horizonY, env) {
+  const H = canvas.height, W = canvas.width;
+  const groundMid = env.groundColor;
+  // Draw perspective lines for track lanes
+  for (let l = -3; l <= 3; l++) {
+    const topX = W/2 + l * LANE_WIDTH * 0.1;
+    const botX = getLaneX(l);
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(topX, horizonY);
+    ctx.lineTo(botX, H);
+    ctx.stroke();
+  }
+  // Draw snow/ground stripes
+  for (let i = 0; i < 8; i++) {
+    const z = ((state.distance * 0.3 + i * 60) % 480);
+    const p = project(0, z);
+    if (p.y > horizonY && p.y < H) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, p.y);
+      ctx.lineTo(W, p.y);
+      ctx.stroke();
+    }
+  }
+}
+
+function drawTree(proj, obj, env) {
+  const s = proj.scale;
+  const x = proj.x, y = proj.y;
+  const h = 70 * s, tw = 40 * s;
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
+  ctx.beginPath();
+  ctx.ellipse(x, y, tw*0.6, 6*s, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Trunk
+  ctx.fillStyle = '#5d3a1a';
+  ctx.fillRect(x - 4*s, y - 14*s, 8*s, 14*s);
+
+  // Event-themed tree
+  const ev = state.currentEvent;
+  let treeColor1 = '#2e7d32', treeColor2 = '#1b5e20';
+  if (ev) {
+    if (ev.id === 'fire') { treeColor1 = '#8b2000'; treeColor2 = '#5a0000'; }
+    if (ev.id === 'phantom') { treeColor1 = '#4a0080'; treeColor2 = '#2a0050'; }
+    if (ev.id === 'christmas') { treeColor1 = '#1b5e20'; treeColor2 = '#0a3a10'; }
+    if (ev.id === 'easter') { treeColor1 = '#388e3c'; treeColor2 = '#1b5e20'; }
+  }
+
+  // Tree tiers
+  ctx.fillStyle = treeColor2;
+  ctx.beginPath(); ctx.moveTo(x, y-h); ctx.lineTo(x-tw, y-12*s); ctx.lineTo(x+tw, y-12*s); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = treeColor1;
+  ctx.beginPath(); ctx.moveTo(x, y-h*0.75); ctx.lineTo(x-tw*0.85, y-20*s); ctx.lineTo(x+tw*0.85, y-20*s); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#4caf50';
+  ctx.beginPath(); ctx.moveTo(x, y-h*0.5); ctx.lineTo(x-tw*0.65, y-28*s); ctx.lineTo(x+tw*0.65, y-28*s); ctx.closePath(); ctx.fill();
+
+  // Christmas lights
+  if (ev && ev.id === 'christmas') {
+    const colors = ['#ff3333','#ffd700','#3399ff','#33ff66'];
+    for (let i = 0; i < 5; i++) {
+      const angle = i * Math.PI*2/5;
+      const lx = x + Math.cos(angle) * tw*0.4;
+      const ly = y - 30*s + Math.sin(angle) * 8*s;
+      ctx.fillStyle = colors[i%4];
+      ctx.beginPath();
+      ctx.arc(lx, ly, 3*s, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+}
+
+function drawCoin(proj, color, isEgg, isGift) {
+  const s = proj.scale;
+  const x = proj.x, y = proj.y;
+  const r = 12 * s;
+
+  // Bobbing
+  const bob = Math.sin(performance.now() * 0.004 + proj.x) * 3 * s;
+
+  ctx.save();
+  ctx.translate(x, y + bob);
+
+  if (isEgg) {
+    // Easter egg
+    ctx.fillStyle = '#ffe066';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r*0.8, r, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.strokeStyle = '#ff88aa';
+    ctx.lineWidth = 1.5*s;
+    ctx.beginPath();
+    ctx.arc(0, -r*0.1, r*0.6, 0.2, Math.PI-0.2);
+    ctx.stroke();
+  } else if (isGift) {
+    // Christmas gift
+    ctx.fillStyle = '#ff3333';
+    ctx.fillRect(-r, -r*0.8, r*2, r*1.6);
+    ctx.fillStyle = '#ffd700';
+    ctx.fillRect(-2*s, -r*0.8, 4*s, r*1.6);
+    ctx.fillRect(-r, -2*s, r*2, 4*s);
+  } else {
+    // Coin with "67"
+    const grad = ctx.createRadialGradient(-r*0.3, -r*0.3, 0, 0, 0, r);
+    grad.addColorStop(0, '#ffe066');
+    grad.addColorStop(0.7, color);
+    grad.addColorStop(1, shadeColor(color, -40));
+    ctx.fillStyle = grad;
+    ctx.strokeStyle = '#ffe066';
+    ctx.lineWidth = 1.5*s;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI*2);
+    ctx.fill();
+    ctx.stroke();
+    // "67" text on coin
+    ctx.fillStyle = '#7a5500';
+    ctx.font = `bold ${Math.max(6, 9*s)}px Nunito`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('67', 0, 0);
+  }
+
+  // Glow effect
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 8*s;
+  ctx.restore();
+}
+
+function drawPlayer() {
+  const W = canvas.width, H = canvas.height;
+  const playerY = H * 0.78;
+  const centerX = W / 2 + state.player.laneF * LANE_WIDTH * 0.7;
+
+  // Invincibility flash
+  if (state.player.invincible > 0 && Math.floor(state.player.invincible * 10) % 2) {
+    return;
+  }
+
+  const [c1, c2] = getSleighColors();
+  const def = SLEIGHS.find(s => s.id === state.equippedSleigh);
+  const glowing = def && def.glow || state.equippedSleigh === 'custom';
+
+  ctx.save();
+  ctx.translate(centerX, playerY);
+
+  // Glow effect for special sleighs
+  if (glowing) {
+    ctx.shadowColor = c1;
+    ctx.shadowBlur = 20;
+  }
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.beginPath();
+  ctx.ellipse(0, 20, 35, 8, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // Sleigh body
+  const grad = ctx.createLinearGradient(-30, -15, 30, 15);
+  grad.addColorStop(0, c1);
+  grad.addColorStop(1, c2);
+  ctx.fillStyle = grad;
+
+  // Sleigh base
+  ctx.beginPath();
+  ctx.moveTo(-35, 10);
+  ctx.lineTo(35, 10);
+  ctx.lineTo(28, -5);
+  ctx.lineTo(-28, -5);
+  ctx.closePath();
+  ctx.fill();
+
+  // Sleigh back
+  ctx.fillStyle = shadeColor(c2, 20);
+  ctx.beginPath();
+  ctx.moveTo(-28, -5);
+  ctx.lineTo(-20, -20);
+  ctx.lineTo(20, -20);
+  ctx.lineTo(28, -5);
+  ctx.closePath();
+  ctx.fill();
+
+  // Special decorations
+  if (state.equippedSleigh === 'blossom') {
+    // Flowers
+    const flowerColors = ['#ff88cc','#ff44aa','#ffaadd'];
+    for (let i = -2; i <= 2; i++) {
+      ctx.fillStyle = flowerColors[(i+2)%3];
+      ctx.beginPath();
+      ctx.arc(i*12, -12, 4, 0, Math.PI*2);
+      ctx.fill();
+    }
+  } else if (state.equippedSleigh === 'aqua') {
+    // Water shimmer
+    ctx.strokeStyle = 'rgba(135,220,255,0.6)';
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.moveTo(-20+i*15, 0);
+      ctx.bezierCurveTo(-15+i*15, -8, -10+i*15, -8, -5+i*15, 0);
+      ctx.stroke();
+    }
+  } else if (state.equippedSleigh === 'roots') {
+    // Vine lines
+    ctx.strokeStyle = '#2e7d32';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-30, 5);
+    ctx.bezierCurveTo(-15, -15, 0, -5, 15, -15);
+    ctx.bezierCurveTo(20, -20, 25, -12, 30, -5);
+    ctx.stroke();
+  } else if (state.equippedSleigh === 'lava') {
+    // Lava cracks
+    ctx.strokeStyle = '#ff6600';
+    ctx.lineWidth = 1.5;
+    ctx.shadowColor = '#ff4400'; ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.moveTo(-10, 5); ctx.lineTo(0, -5); ctx.lineTo(15, 5);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  // Skis
+  ctx.fillStyle = shadeColor(c2, -50);
+  ctx.fillRect(-38, 10, 16, 5);
+  ctx.fillRect(22, 10, 16, 5);
+
+  // Rider (simple figure)
+  ctx.fillStyle = '#e8d5c0';
+  ctx.beginPath();
+  ctx.arc(0, -28, 8, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = shadeColor(c1, 20);
+  ctx.fillRect(-8, -25, 16, 16);
+
+  ctx.restore();
+}
+
+function drawSnow() {
+  ctx.save();
+  for (const s of state.snowParticles) {
+    ctx.globalAlpha = s.alpha;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.size, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function drawEventFX(ev) {
+  const W = canvas.width, H = canvas.height;
+  if (ev.id === 'fire') {
+    // Fire particles at bottom
+    for (let i = 0; i < 5; i++) {
+      const x = (Math.sin(performance.now()*0.001 + i) * 0.5 + 0.5) * W;
+      const y = H - 40;
+      const r = 20 + Math.sin(performance.now()*0.003+i)*10;
+      const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
+      grad.addColorStop(0, 'rgba(255,200,0,0.6)');
+      grad.addColorStop(1, 'rgba(255,50,0,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI*2);
+      ctx.fill();
+    }
+  } else if (ev.id === 'phantom') {
+    // Ghostly overlay
+    ctx.fillStyle = 'rgba(100,0,150,0.05)';
+    ctx.fillRect(0, 0, W, H);
+    // Phantom orbs
+    for (let i = 0; i < 3; i++) {
+      const t = performance.now()*0.001 + i*2;
+      const x = W * (0.2 + Math.sin(t*0.7)*0.3) + i*W*0.25;
+      const y = H * (0.3 + Math.sin(t)*0.2);
+      const grad = ctx.createRadialGradient(x, y, 0, x, y, 30);
+      grad.addColorStop(0, 'rgba(180,50,255,0.3)');
+      grad.addColorStop(1, 'rgba(100,0,150,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(x, y, 30, 0, Math.PI*2);
+      ctx.fill();
+    }
+  } else if (ev.id === 'christmas') {
+    // Falling snow sparkles
+    for (const s of state.snowParticles.slice(0,30)) {
+      ctx.fillStyle = '#ffe066';
+      ctx.font = '10px serif';
+      ctx.globalAlpha = s.alpha * 0.5;
+      ctx.fillText('✦', s.x, s.y);
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
+function updateHUD() {
+  document.getElementById('coin-count').textContent = state.coins;
+  document.getElementById('dist-display').textContent = Math.round(state.distance) + 'm';
+  updateHealthBar();
+}
+
+function updateHealthBar() {
+  const bar = document.getElementById('health-bar');
+  bar.style.width = state.player.health + '%';
+  if (state.player.health > 60) bar.style.background = 'linear-gradient(90deg,#4af0c0,#22e0a0)';
+  else if (state.player.health > 30) bar.style.background = 'linear-gradient(90deg,#ffaa22,#ff8800)';
+  else bar.style.background = 'linear-gradient(90deg,#ff4466,#cc2244)';
+}
+
+// ===================== SCREENS =====================
+function hideAllScreens() {
+  document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+  document.getElementById('pause-menu').classList.add('hidden');
+  document.getElementById('hud').style.display = 'none';
+}
+
+function showScreen(id) {
+  hideAllScreens();
+  document.getElementById(id).classList.remove('hidden');
+  if (id === 'shop-screen') {
+    renderShop();
+    document.getElementById('shop-coins').textContent = state.coins;
+  }
+  if (id === 'env-screen') renderEnvScreen();
+}
+
+function pauseGame() {
+  state.gameState = 'paused';
+  document.getElementById('pause-menu').classList.remove('hidden');
+}
+
+function resumeGame() {
+  state.gameState = 'playing';
+  document.getElementById('pause-menu').classList.add('hidden');
+}
+
+function quitGame() {
+  state.gameState = 'menu';
+  document.getElementById('pause-menu').classList.add('hidden');
+  showScreen('main-menu');
+  document.getElementById('hud').style.display = 'none';
+}
+
+function showDeathScreen() {
+  if (state.distance > state.bestDist) {
+    state.bestDist = Math.round(state.distance);
+    saveState();
+  }
+  document.getElementById('ds-dist').textContent = Math.round(state.distance) + 'm';
+  document.getElementById('ds-coins').textContent = state.sessionCoins;
+  document.getElementById('ds-best').textContent = state.bestDist + 'm';
+  showScreen('death-screen');
+  document.getElementById('hud').style.display = 'flex';
+}
+
+// ===================== SHOP =====================
+function renderShop() {
+  document.getElementById('shop-coins').textContent = state.coins;
+  const grid = document.getElementById('shop-grid');
+  grid.innerHTML = '';
+
+  const allSleighs = [...SLEIGHS, { id:'custom', name:'My Custom', cost:0, desc:'Your design', colors:[state.customColor, shadeColor(state.customColor,-30)], unlocked:true }];
+
+  allSleighs.forEach(s => {
+    const owned = state.unlockedSleighs.includes(s.id) || s.unlocked || s.id === 'custom';
+    const equipped = state.equippedSleigh === s.id;
+    const canBuy = state.coins >= s.cost;
+
+    const card = document.createElement('div');
+    card.className = 'sleigh-card' + (equipped ? ' equipped' : '') + (!owned ? ' locked' : '');
+
+    // Canvas preview
+    const previewCanvas = document.createElement('canvas');
+    previewCanvas.width = 80; previewCanvas.height = 50;
+    previewCanvas.style.cssText = 'margin:0 auto 8px;display:block;border-radius:6px';
+    const pc = previewCanvas.getContext('2d');
+    const colors = s.id === 'custom' ? [state.customColor, shadeColor(state.customColor,-30)] : s.colors;
+    drawSleighPreview(pc, 40, 35, colors, s.id, s.glow);
+    card.appendChild(previewCanvas);
+
+    card.innerHTML += `<div class="sleigh-name">${s.name}</div>`;
+    if (!owned) card.innerHTML += `<div class="sleigh-cost">🪙 ${s.cost}</div>`;
+    else if (!equipped) card.innerHTML += `<div class="sleigh-cost" style="color:var(--color-primary)">Equip</div>`;
+
+    card.addEventListener('click', () => {
+      if (equipped) return;
+      if (!owned) {
+        if (state.coins >= s.cost) {
+          state.coins -= s.cost;
+          state.unlockedSleighs.push(s.id);
+          state.equippedSleigh = s.id;
+          saveState();
+          showNotification('🛷 ' + s.name + ' unlocked & equipped!');
+          renderShop();
+        } else {
+          showNotification('Not enough coins! Need ' + s.cost);
+        }
+      } else {
+        state.equippedSleigh = s.id;
+        saveState();
+        showNotification('Equipped: ' + s.name);
+        renderShop();
+      }
+    });
+    grid.appendChild(card);
+  });
+}
+
+function drawSleighPreview(pc, cx, cy, colors, id, glow) {
+  pc.clearRect(0, 0, 80, 50);
+  if (glow) { pc.shadowColor = colors[0]; pc.shadowBlur = 8; }
+  const grad = pc.createLinearGradient(cx-25, cy-10, cx+25, cy+10);
+  grad.addColorStop(0, colors[0]);
+  grad.addColorStop(1, colors[1]);
+  pc.fillStyle = grad;
+  pc.beginPath();
+  pc.moveTo(cx-25, cy+6);
+  pc.lineTo(cx+25, cy+6);
+  pc.lineTo(cx+20, cy-3);
+  pc.lineTo(cx-20, cy-3);
+  pc.closePath();
+  pc.fill();
+  pc.fillStyle = shadeColor(colors[1], 20);
+  pc.beginPath();
+  pc.moveTo(cx-20, cy-3);
+  pc.lineTo(cx-14, cy-14);
+  pc.lineTo(cx+14, cy-14);
+  pc.lineTo(cx+20, cy-3);
+  pc.closePath();
+  pc.fill();
+  pc.shadowBlur = 0;
+}
+
+function switchShopTab(tab, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('shop-tab-sleighs').style.display = tab === 'sleighs' ? 'block' : 'none';
+  document.getElementById('shop-tab-custom').style.display = tab === 'custom' ? 'block' : 'none';
+  if (tab === 'custom') renderCustomize();
+}
+
+function renderCustomize() {
+  const grid = document.getElementById('color-grid');
+  grid.innerHTML = '';
+  CUSTOM_COLORS.forEach(color => {
+    const sw = document.createElement('div');
+    sw.className = 'color-swatch' + (state.customColor === color ? ' selected' : '');
+    sw.style.background = color;
+    sw.addEventListener('click', () => {
+      if (state.customColor !== color) {
+        if (state.coins < 20 && state.customColor !== color && state.customColor !== '#4af0c0') {
+          // First time is free, after that costs 20
+        }
+        state.customColor = color;
+        saveState();
+        renderCustomize();
+      }
+    });
+    grid.appendChild(sw);
+  });
+  // Preview
+  const prev = document.getElementById('custom-preview');
+  const pc = prev.getContext ? prev.getContext('2d') : null;
+  if (!pc) {
+    // It's a div, use CSS
+    prev.style.background = `linear-gradient(135deg, ${state.customColor}, ${shadeColor(state.customColor,-40)})`;
+  }
+}
+
+// ===================== ENVIRONMENTS =====================
+function renderEnvScreen() {
+  const grid = document.getElementById('env-grid');
+  grid.innerHTML = '';
+  ENVIRONMENTS.forEach(env => {
+    const owned = state.unlockedEnvs.includes(env.id) || env.unlocked;
+    const active = state.selectedEnv === env.id;
+    const card = document.createElement('div');
+    card.className = 'env-card' + (active ? ' active' : '');
+    const prevDiv = document.createElement('div');
+    prevDiv.className = 'env-preview';
+    prevDiv.style.background = `linear-gradient(135deg, ${env.bgColors[0]}, ${env.bgColors[1]})`;
+    prevDiv.style.borderBottom = `3px solid ${env.groundColor}`;
+    card.appendChild(prevDiv);
+    card.innerHTML += `<div style="font-weight:800;font-size:13px;color:var(--color-text)">${env.name}</div>`;
+    if (!owned) card.innerHTML += `<div style="font-size:11px;color:var(--color-gold);margin-top:4px">🪙 ${env.cost}</div>`;
+    else card.innerHTML += `<div style="font-size:11px;color:var(--color-primary);margin-top:4px">${active ? '✓ Active' : 'Use'}</div>`;
+    card.addEventListener('click', () => {
+      if (!owned) {
+        if (state.coins >= env.cost) {
+          state.coins -= env.cost;
+          state.unlockedEnvs.push(env.id);
+          state.selectedEnv = env.id;
+          saveState();
+          showNotification('🏔 ' + env.name + ' unlocked!');
+          renderEnvScreen();
+        } else {
+          showNotification('Need ' + env.cost + ' coins!');
+        }
+      } else {
+        state.selectedEnv = env.id;
+        saveState();
+        renderEnvScreen();
+      }
+    });
+    grid.appendChild(card);
+  });
+}
+
+// ===================== GAME STATE HOOK =====================
+window.render_game_to_text = function() {
+  return JSON.stringify({
+    mode: state.gameState,
+    player: { laneF: Math.round(state.player.laneF*10)/10, health: state.player.health },
+    distance: Math.round(state.distance),
+    coins: state.coins,
+    sessionCoins: state.sessionCoins,
+    speed: Math.round(state.speed),
+    objects: state.objects.slice(0,10).map(o=>({type:o.type,lane:o.lane,z:Math.round(o.z)})),
+    event: state.currentEvent ? state.currentEvent.id : null,
+  });
+};
+
+window.advanceTime = function(ms) {
+  const steps = Math.max(1, Math.round(ms / (1000/60)));
+  for (let i = 0; i < steps; i++) {
+    if (state.gameState === 'playing') update(1/60);
+  }
+  render();
+};
+
+// ===================== INIT =====================
+showScreen('main-menu');
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>
